@@ -1,0 +1,6 @@
+
+import CC=gcc
+
+: src/main.c |> $(CC) %f -o %o |> bin/kvds
+
+.gitignore

@@ -1,0 +1,3 @@
+select 3
+write Hello world
+read

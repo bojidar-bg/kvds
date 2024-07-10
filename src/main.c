@@ -40,10 +40,7 @@ int main(int argc, char **argv) {
     }
     
     if (fgets(line, sizeof line / sizeof line[0], stdin)) {
-      output_buf[0] = '\0';
-      char *output = output_buf;
-      int err = kvds_execute_command(state, line, &output, sizeof output_buf / sizeof output_buf[0]);
-      fprintf(stdout, "%s", output);
+      int err = kvds_execute_command(state, line, stdout);
       if (err) {
         fprintf(stderr, "Error: %s\n", kvds_get_error(err));
         if (err == -1) {

@@ -1,0 +1,9 @@
+select 10
+write 1
+select 11
+write 1
+exists
+delete
+exists
+closest
+key

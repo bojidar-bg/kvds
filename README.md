@@ -16,11 +16,7 @@ After installing the dependencies, just run the following line to build the proj
 tup
 ```
 
-To use another compiler, run e.g. the following:
-
-```bash
-CC=lang tup
-```
+To use another compiler, change the tup.config file in `bin/`.
 
 After compiling, you can find the resulting binary in `bin/kvds`.
 

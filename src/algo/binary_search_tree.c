@@ -59,8 +59,8 @@ static void _bst_print_tree(bst_node *node, int depth) {
 }
 #ifndef NDEBUG
 typedef struct bst_invariants {
-  int range_min;
-  int range_max;
+  long long range_min;
+  long long range_max;
 } bst_invariants;
 static bst_invariants _bst_assert_invariants(bst_node *node, int depth) {
   //fprintf(stderr, "%*c Node: %lld, size: %d\n", depth * 2, bst_is_left(node) ? '-' : '+', node->key, node->size);
@@ -221,8 +221,10 @@ static void bst_node_detach(bst_db *db, bst_node *node, bool update_size) {
   } else {
     assert(false);
   }
-  for(bst_node *old_parent = node->parent; old_parent != NULL; old_parent = old_parent->parent) {
-    old_parent->size -= node->size;
+  if (update_size) {
+    for(bst_node *old_parent = node->parent; old_parent != NULL; old_parent = old_parent->parent) {
+      old_parent->size -= node->size;
+    }
   }
   node->parent = NULL;
 }
@@ -240,10 +242,30 @@ static void bst_node_attach(bst_db *db, bst_node *node, bst_node *parent, bool o
     assert(parent->right == NULL);
     node->parent->right = node;
   }
-  for(bst_node *new_parent = node->parent; new_parent != NULL; new_parent = new_parent->parent) {
-    assert(new_parent != node);
-    new_parent->size += node->size;
+  if (update_size) {
+    for(bst_node *new_parent = node->parent; new_parent != NULL; new_parent = new_parent->parent) {
+      assert(new_parent != node);
+      new_parent->size += node->size;
+    }
   }
+}
+static bst_node *bst_node_rotate(bst_db *db, bst_node *node) {
+  assert(node->parent != NULL);
+  bst_node *parent = node->parent;
+  bool is_left = parent->left == node;
+  bst_node *parent_other = is_left ? parent->right : parent->left;
+  bst_node *middle = is_left ? node->right : node->left;
+  bst_node *parent_old_loc = parent->parent;
+  bool parent_old_is_left = bst_is_left(parent);
+  
+  bst_node_detach(db, parent, true);
+  bst_node_detach(db, node, true);
+  if (middle != NULL) bst_node_detach(db, middle, true);
+  
+  bst_node_attach(db, parent, node, !is_left, true);
+  bst_node_attach(db, node, parent_old_loc, parent_old_is_left, true);
+  if (middle != NULL) bst_node_attach(db, middle, parent, is_left, true);
+  return node;
 }
 
 static void _bst_node_recreate_collect(bst_node *node, bst_node ***nodes_i_p) {
@@ -357,10 +379,54 @@ static char *bst_remove(kvds_db *_db, kvds_cursor *_cursor) {
     return NULL;
   } else {
     char *data = cursor->best->data;
-    bst_node *parent = cursor->best->parent;
+    bst_node *node = cursor->best;
+    bst_node *swap_node = NULL;
+    if (node->left == NULL && node->right == NULL) {
+      // YAY!
+    } else if (bst_get_size(node->right) > bst_get_size(node->left)) { // Swap with a node from the side that's heavier
+      assert(node->right != NULL);
+      swap_node = node->right;
+      while (swap_node->left != NULL) swap_node = swap_node->left;
+      if (swap_node->right != NULL) {
+        bst_node_rotate(db, swap_node->right);
+      }
+    } else {
+      assert(node->left != NULL);
+      swap_node = node->left;
+      while (swap_node->right != NULL) swap_node = swap_node->right;
+      if (swap_node->left != NULL) {
+        bst_node_rotate(db, swap_node->left);
+      }
+    }
+    bst_node *old_parent = node->parent;
+    bool old_was_left = bst_is_left(node);
+    
+    bst_node_detach(db, node, true);
+    
+    if (swap_node != NULL) {
+      bst_node *node_left = node->left;
+      bst_node *node_right = node->right;
+      if (node_left != NULL) bst_node_detach(db, node_left, true);
+      if (node_right != NULL) bst_node_detach(db, node_right, true);
+    
+      bst_node *rebalance_from = swap_node;
+      if (node_left != swap_node && node_right != swap_node) {
+        rebalance_from = swap_node->parent;
+        bst_node_detach(db, swap_node, true);
+      }
+      
+      if (node_left != swap_node && node_left != NULL) bst_node_attach(db, node_left, swap_node, true, true);
+      if (node_right != swap_node && node_right != NULL) bst_node_attach(db, node_right, swap_node, false, true);
+      bst_node_attach(db, swap_node, old_parent, old_was_left, true);
+      
+      bst_node_rebalance_from(db, rebalance_from);
+    } else {
+      bst_node_rebalance_from(db, old_parent);
+    }
+    
     cursor->best = bst_node_locate(db, cursor->key);
-    bst_node_rebalance_from(db, parent);
-    return cursor->best->data;
+    
+    return data;
   }
 }
 
@@ -423,5 +489,6 @@ REGISTER("binary_search_tree", "bst") {
   
   .write = bst_write,
   .read = bst_read,
+  .remove = bst_remove,
 };
 

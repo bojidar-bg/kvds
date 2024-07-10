@@ -1,0 +1,26 @@
+select 3
+write X
+select 1
+write Y
+select 2
+write Z
+select 21
+write %
+select 1
+read
+next
+read
+next
+read
+next
+read
+prev
+prev
+read
+prev
+prev
+prev
+read
+select 12
+closest
+read

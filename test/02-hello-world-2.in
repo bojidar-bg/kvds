@@ -1,0 +1,12 @@
+select 3
+write world
+select 1
+write He
+select 2
+write llo
+select 1
+read
+select 2
+read
+select 3
+read

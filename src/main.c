@@ -1,24 +1,73 @@
+#include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include "commands.h"
+#include "interface.h"
+#include "registry.h"
 
-int main() {
+int main(int argc, char **argv) {
+  char* algo_name = "binary_search_tree";
+  if (argc > 1) {
+    algo_name = argv[argc - 1]; // TODO: Flag parsing
+  }
+  
+  struct kvds_database_algo *algo = kvds_get_algo(algo_name);
+  
+  if (algo == NULL) {
+      fprintf(stderr, "Error: No such algorithm: %s", algo_name);
+  }
+  
+  kvds_db *db = algo->create_db();
+  
+  if (db == NULL) {
+      fprintf(stderr, "Error: Failed to create database");
+  }
+  
+  struct kvds_command_state *state = kvds_create_command_state(algo, db);
+  
   bool interactive = isatty(fileno(stdin));
   
-  while(!feof(stdin)) {
+  int exit_code = 0;
+  
+  char line[1000];
+  char output_buf[1000];
+  while(true) {
     if (interactive) {
+      fflush(stdout);
       fprintf(stderr, "> ");
     }
     
-    char line[1000];
-    fgets(line, 1000, stdin);
+    if (fgets(line, sizeof line / sizeof line[0], stdin)) {
+      output_buf[0] = '\0';
+      char *output = output_buf;
+      int err = kvds_execute_command(state, line, &output, sizeof output_buf / sizeof output_buf[0]);
+      fprintf(stdout, "%s", output);
+      if (err) {
+        fprintf(stderr, "Error: %s\n", kvds_get_error(err));
+        if (err == -1) {
+          break;
+        }
+        exit_code = 1;
+      } else {
+        exit_code = 0;
+      }
+    }
     if (ferror(stdin)) {
       fprintf(stderr, "Read error: %d", ferror(stdin));
-      return 1;
+      exit_code = 2;
+      break;
     }
-    fprintf(stdout, "%s", line);
+    if (feof(stdin)) {
+      break;
+    }
   }
   
-  return 0;
+  kvds_destroy_command_state(state);
+  algo->destroy_db(db, (void*)&free);
+  
+  
+  
+  return exit_code;
 }

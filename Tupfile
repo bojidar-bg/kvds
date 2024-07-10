@@ -1,6 +1,12 @@
 
 import CC=gcc
+CCFLAGS += -g
+CCFLAGS += -O3 -fno-omit-frame-pointer
+CCFLAGS += -DNDEBUG
+import LD=gcc
 
-: src/main.c |> $(CC) %f -o %o |> bin/kvds
+: foreach src/algo/*.c |> $(CC) %f $(CCFLAGS) -c -o %o |> obj/algo/%B.o {objs}
+: foreach src/*.c |> $(CC) %f $(CCFLAGS) -c -o %o |> obj/%B.o {objs}
+: {objs} |> $(LD) %f -o %o |> bin/kvds
 
 .gitignore

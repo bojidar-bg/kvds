@@ -33,12 +33,12 @@ Commands:
 | Command | Alias | Arguments | Description |
 | --- | --- | --- | --- |
 | select | s | key: integer | Moves the cursor to a given key in the database. |
-| info | i | | Prints the current cursor location along with misc. information about it. |
-| exists? | e | | Prints whether the selected key exists. |
+| key | k | | Prints the current cursor location. |
+| exists | e | | Prints whether the selected key exists. |
 | read | r | | Prints the data at the selected key. |
 | write | w | data: ... | Stores data at the selected key. Passing no data will still create the key. |
 | delete | d | | Deletes the selected key along with any data. |
-| prev | p, < | | Moves to the previous existing key (larger than the cursor) |
+| prev | p, < | | Moves to the previous existing key (smaller than the cursor) |
 | next | n, > | | Moves to the next existing key (larger than the cursor) |
 | closest | c, = | | Moves to the closest existing key (closer of prev and next, arbitrarily tiebreaking to prev) |
 

@@ -364,7 +364,7 @@ static char *bst_read(kvds_db *_db, kvds_cursor *_cursor) {
   bst_db *db = _db;
   bst_cursor *cursor = _cursor;
   
-  if (cursor->best != NULL && cursor->best->key == cursor->key) { // Special case: already exists
+  if (cursor->best != NULL && cursor->best->key == cursor->key) { // The node exists
     return cursor->best->data;
   } else { 
     return NULL;
@@ -439,22 +439,6 @@ static void bst_snap(kvds_db *_db, kvds_cursor *_cursor, enum kvds_snap_directio
   }
   
   switch (dir) {
-    case KVDS_SNAP_CLOSEST_LOW: {
-      if (cursor->best->key == cursor->key) {
-        // Already at closest
-      } else if (cursor->key < cursor->best->key) {
-        bst_node *alternative = bst_node_navigate_left(cursor->best);
-        if (alternative != NULL && alternative->key - cursor->key < cursor->key - cursor->best->key) {
-          cursor->best = alternative;
-        }
-      } else {
-        bst_node *alternative = bst_node_navigate_right(cursor->best);
-        if (alternative != NULL && cursor->key - alternative->key < cursor->best->key - cursor->key) {
-          cursor->best = alternative;
-        }
-      }
-      cursor->key = cursor->best->key;
-    } break;
     case KVDS_SNAP_HIGHER: {
       if (cursor->best->key <= cursor->key) {
         bst_node *alternative = bst_node_navigate_right(cursor->best);
@@ -469,6 +453,31 @@ static void bst_snap(kvds_db *_db, kvds_cursor *_cursor, enum kvds_snap_directio
         bst_node *alternative = bst_node_navigate_left(cursor->best);
         if (alternative != NULL) {
           cursor->best = alternative;
+        }
+      }
+      cursor->key = cursor->best->key;
+    } break;
+    case KVDS_SNAP_CLOSEST_LOW: {
+      if (cursor->best->key == cursor->key) {
+        // Already at closest
+      } else {
+        bst_node *left;
+        bst_node *right;
+        if (cursor->key < cursor->best->key) {
+          left = bst_node_navigate_left(cursor->best);
+          right = cursor->best;
+        } else {
+          left = cursor->best;
+          right = bst_node_navigate_right(cursor->best);
+        }
+        if (left != NULL && right != NULL) { // Not past the edge
+          if (cursor->key - left->key <= right->key - cursor->key) {
+            cursor->best = left;
+          } else {
+            cursor->best = right;
+          }
+        } else {
+          // cursor->best already contains closest
         }
       }
       cursor->key = cursor->best->key;

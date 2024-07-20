@@ -1,0 +1,23 @@
+select 0
+write
+select 10
+write
+select -1
+write
+select 11
+write
+select 1
+closest
+key
+select 3
+closest
+key
+select 9
+closest
+key
+select 7
+closest
+key
+select 5
+closest
+key

@@ -17,12 +17,17 @@ int main(int argc, char **argv) {
   
   if (algo == NULL) {
       fprintf(stderr, "Error: No such algorithm: %s\n", algo_name);
-      const char *names[100];
-      kvds_list_algos(names, sizeof names / sizeof names[0]);
-      fprintf(stderr, "  Available algorithms:\n");
-      for (const char **name = names; *name != 0; name ++) {
-        fprintf(stderr, "  - %s\n", *name);
+      fprintf(stderr, "  Available algorithms:");
+      struct kvds_database_algo *last_algo = NULL;
+      for (struct kvds_registry_entry *entry = kvds_get_algos_list(); entry; entry = entry->next) {
+        if (entry->algo == last_algo) { // List multiple name of an algorithm on the same line
+          fprintf(stderr, ", %s", entry->name);
+        } else {
+          fprintf(stderr, "\n  - %s", entry->name);
+        }
+        last_algo = entry->algo;
       }
+      fprintf(stderr, "\n");
       
   }
   

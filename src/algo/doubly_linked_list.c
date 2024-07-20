@@ -35,7 +35,7 @@ static void dlist_assert_invariants(dlist_db *db) {
     node = node->next;
   }
   assert(db->tail == prev_node);
-  assert(prev_node->next == NULL);
+  if (prev_node != NULL) assert(prev_node->next == NULL);
 }
 #else
 static void dlist_assert_invariants(dlist_db *db) {
@@ -47,6 +47,9 @@ static kvds_db *dlist_create_db() {
   dlist_db *db = malloc(sizeof(dlist_db));
   db->head = NULL;
   db->tail = NULL;
+  
+  dlist_assert_invariants(db);
+  
   return db;
 }
 
@@ -198,7 +201,6 @@ static char *dlist_remove(kvds_db *_db, kvds_cursor *_cursor) {
   char *data = cursor->best->data;
   
   dlist_node *old_node = cursor->best;
-  dlist_node *swap_node = NULL;
   
   if (old_node->next != NULL) {
     old_node->next->prev = old_node->prev;
@@ -209,7 +211,7 @@ static char *dlist_remove(kvds_db *_db, kvds_cursor *_cursor) {
   if (old_node->prev != NULL) {
     old_node->prev->next = old_node->next;
   } else {
-    db->tail = old_node->next;
+    db->head = old_node->next;
   }
   
   cursor->best = old_node->next != NULL ? old_node->next : old_node->prev; // Either one is fine, just pick the non-NULL one
@@ -274,7 +276,7 @@ static void dlist_snap(kvds_db *_db, kvds_cursor *_cursor, enum kvds_snap_direct
   }
 }
 
-REGISTER("doubly_linked_list", "dll") {
+REGISTER("doubly_linked_list", "dlist") {
   .create_db = dlist_create_db,
   .destroy_db = dlist_destroy_db,
   .create_cursor = dlist_create_cursor,

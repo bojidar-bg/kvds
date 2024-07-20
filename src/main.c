@@ -16,7 +16,14 @@ int main(int argc, char **argv) {
   struct kvds_database_algo *algo = kvds_get_algo(algo_name);
   
   if (algo == NULL) {
-      fprintf(stderr, "Error: No such algorithm: %s", algo_name);
+      fprintf(stderr, "Error: No such algorithm: %s\n", algo_name);
+      const char *names[100];
+      kvds_list_algos(names, sizeof names / sizeof names[0]);
+      fprintf(stderr, "  Available algorithms:\n");
+      for (const char **name = names; *name != 0; name ++) {
+        fprintf(stderr, "  - %s\n", *name);
+      }
+      
   }
   
   kvds_db *db = algo->create_db();

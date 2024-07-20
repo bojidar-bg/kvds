@@ -5,10 +5,16 @@ set -o pipefail
 
 cd "`dirname $0`"
 
+ALGO="${1:-binary_search_tree}"
+
 KVDS=../bin/kvds
+
+echo "ALGO: $ALGO"
 
 for f in ./*.in; do
   o=${f%.in}.out
   echo "TEST: $f"
-  git diff --no-index $o <(cat $f | $KVDS)
+  git diff --no-index $o <(cat $f | $KVDS $ALGO)
 done
+
+echo "DONE: all tests passed!"

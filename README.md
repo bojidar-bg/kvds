@@ -160,9 +160,9 @@ Two very useful tools used while developing the code were be [`gdb`](https://www
 
 Other than those, all one really needs is a text editor; preferably one that supports syntax highlighting and integrates with some C language server, e.g. [`clangd`](https://clangd.llvm.org).
 
-As mentioned in the compiling and testing sections above, others tools used for the development include [`tup`](https://gittup.org/tup/index.html), [`gcc`](https://gcc.gnu.org), and [`afl++`](https://github.com/AFLplusplus/AFLplusplus). In addition to them, [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) is used to format the codebase; and of course, the whole thing is managed through [`git`](https://git-scm.com) and documented in [GFM markdown](https://github.github.com/gfm/).
+As mentioned in the compiling and testing sections above, others tools used for the development include [`tup`](https://gittup.org/tup/index.html), [`gcc`](https://gcc.gnu.org), and [`afl++`](https://github.com/AFLplusplus/AFLplusplus). In addition to them, [`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) is used to format the codebase; and of course, the whole thing is managed through [`git`](https://git-scm.com) using [Conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) and documented in [GFM markdown](https://github.github.com/gfm/).
 
-To enable running `clang-format` automatically before committing, run the following line:
+To enable running `clang-format` and checking commit messages automatically before committing, run the following line:
 ```bash
 git config --local core.hooksPath .githooks
 # https://stackoverflow.com/a/54281447

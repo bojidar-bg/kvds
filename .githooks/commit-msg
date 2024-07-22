@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -e
+
+head -n 1 <"$1" | grep -E '^[a-zA-Z ]+(\(.+\))?[!]?: .+$' >/dev/null || { echo "Commit messsage should start with [a-z]+!?:, as per Conventional Commits."; exit 1; }

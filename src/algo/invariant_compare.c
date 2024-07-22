@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef NDEBUG
 #include "../registry.h"
 #include <assert.h>

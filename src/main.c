@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "commands.h"
 #include "interface.h"
 #include "registry.h"

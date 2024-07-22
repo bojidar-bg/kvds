@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "../registry.h"
 #include <assert.h>
 #include <stdbool.h>

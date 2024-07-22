@@ -6,19 +6,19 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct invar_db {
+typedef struct inv_db {
   int algos_count;
   struct kvds_database_algo **algos;
   kvds_db **databases;
-} invar_db;
+} inv_db;
 
-typedef struct invar_cursor {
+typedef struct inv_cursor {
   kvds_cursor **cursors;
-} invar_cursor;
+} inv_cursor;
 
-static kvds_db *invar_create_db();
+static kvds_db *inv_create_db();
 
-static int invar_list_algos(struct kvds_database_algo **result) {
+static int inv_list_algos(struct kvds_database_algo **result) {
   int algos_count = 0;
   struct kvds_database_algo *last_algo = NULL;
   for (struct kvds_registry_entry *entry = kvds_get_algos_list(); entry; entry = entry->next) {
@@ -26,7 +26,7 @@ static int invar_list_algos(struct kvds_database_algo **result) {
       continue;
     }
     last_algo = entry->algo;
-    if (entry->algo->create_db == invar_create_db) { // Don't call ourselves recursively
+    if (entry->algo->create_db == inv_create_db) { // Don't call ourselves recursively
       continue;
     }
     algos_count ++;
@@ -38,12 +38,12 @@ static int invar_list_algos(struct kvds_database_algo **result) {
   return algos_count;
 }
   
-static kvds_db *invar_create_db() {
-  invar_db *db = malloc(sizeof(invar_db));
+static kvds_db *inv_create_db() {
+  inv_db *db = malloc(sizeof(inv_db));
   
-  db->algos_count = invar_list_algos(NULL);
+  db->algos_count = inv_list_algos(NULL);
   db->algos = calloc(db->algos_count, sizeof(struct kvds_database_algo *));
-  invar_list_algos(db->algos);
+  inv_list_algos(db->algos);
   
   db->databases = calloc(db->algos_count, sizeof(kvds_db *));
   
@@ -54,18 +54,18 @@ static kvds_db *invar_create_db() {
   return db;
 }
 
-static void invar_dummy_free(char *data) {
+static void inv_dummy_free(char *data) {
   // pass
 }
 
-static void invar_destroy_db(kvds_db *_db, void (*free_data)(char *data)) {
-  invar_db *db = _db;
+static void inv_destroy_db(kvds_db *_db, void (*free_data)(char *data)) {
+  inv_db *db = _db;
   
   for (int i = 0; i < db->algos_count; i ++) {
     if (i == db->algos_count - 1) {
       db->algos[i]->destroy_db(db->databases[i], free_data); // Only free the last db's data, to avoid a double-free
     } else {
-      db->algos[i]->destroy_db(db->databases[i], invar_dummy_free);
+      db->algos[i]->destroy_db(db->databases[i], inv_dummy_free);
     }
   }
   
@@ -74,9 +74,9 @@ static void invar_destroy_db(kvds_db *_db, void (*free_data)(char *data)) {
   free(db);
 }
 
-static kvds_cursor *invar_create_cursor(kvds_db *_db, long long key) {
-  invar_db *db = _db;
-  invar_cursor *cursor = malloc(sizeof(invar_cursor));
+static kvds_cursor *inv_create_cursor(kvds_db *_db, long long key) {
+  inv_db *db = _db;
+  inv_cursor *cursor = malloc(sizeof(inv_cursor));
   
   cursor->cursors = calloc(db->algos_count, sizeof(kvds_cursor *));
   
@@ -87,9 +87,9 @@ static kvds_cursor *invar_create_cursor(kvds_db *_db, long long key) {
   return cursor;
 }
 
-static void invar_move_cursor(kvds_db *_db, kvds_cursor *_cursor, long long key) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static void inv_move_cursor(kvds_db *_db, kvds_cursor *_cursor, long long key) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
   for (int i = 0; i < db->algos_count; i ++) {
     if (db->algos[i]->move_cursor != NULL) {
@@ -101,9 +101,9 @@ static void invar_move_cursor(kvds_db *_db, kvds_cursor *_cursor, long long key)
   }
 }
 
-static void invar_destroy_cursor(kvds_db *_db, kvds_cursor *_cursor) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static void inv_destroy_cursor(kvds_db *_db, kvds_cursor *_cursor) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
   for (int i = 0; i < db->algos_count; i ++) {
     db->algos[i]->destroy_cursor(db->databases[i], cursor->cursors[i]);
@@ -116,7 +116,7 @@ static void invar_destroy_cursor(kvds_db *_db, kvds_cursor *_cursor) {
 // #define CONCAT_(a,b) a##b
 // #define CONCAT(a,b) CONCAT_(a,b)
 
-#define _INVAR_ASSERT(db, i, result, result_i, expression) \
+#define _INV_ASSERT(db, i, result, result_i, expression) \
     int i = 0; \
     typeof(expression) result; \
     for (; i < db->algos_count; i ++) { \
@@ -128,78 +128,78 @@ static void invar_destroy_cursor(kvds_db *_db, kvds_cursor *_cursor) {
       } \
     }
 
-#define INVAR_ASSERT(db, i, result, expression) \
-    _INVAR_ASSERT(db, i, result, CONCAT(result_i, __LINE__), expression)
+#define INV_ASSERT(db, i, result, expression) \
+    _INV_ASSERT(db, i, result, CONCAT(result_i, __LINE__), expression)
     
-#define INVAR_ASSERT_RETURN(db, i, expression) \
-    INVAR_ASSERT(db, i, CONCAT(result, __LINE__), expression) \
+#define INV_ASSERT_RETURN(db, i, expression) \
+    INV_ASSERT(db, i, CONCAT(result, __LINE__), expression) \
     return CONCAT(result, __LINE__)
 
-static long long invar_key(kvds_db *_db, kvds_cursor *_cursor) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static long long inv_key(kvds_db *_db, kvds_cursor *_cursor) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
-  INVAR_ASSERT_RETURN(db, i, (db->algos[i]->key(db->databases[i], cursor->cursors[i])));
+  INV_ASSERT_RETURN(db, i, (db->algos[i]->key(db->databases[i], cursor->cursors[i])));
 }
 
-static bool invar_exists(kvds_db *_db, kvds_cursor *_cursor) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static bool inv_exists(kvds_db *_db, kvds_cursor *_cursor) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
-  INVAR_ASSERT_RETURN(db, i, (db->algos[i]->exists(db->databases[i], cursor->cursors[i])));
+  INV_ASSERT_RETURN(db, i, (db->algos[i]->exists(db->databases[i], cursor->cursors[i])));
 }
 
-static void invar_snap(kvds_db *_db, kvds_cursor *_cursor, enum kvds_snap_direction dir) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static void inv_snap(kvds_db *_db, kvds_cursor *_cursor, enum kvds_snap_direction dir) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
   // Here, we would like to snap and immediatelly check the keys
-  INVAR_ASSERT(db, i, _key, (
+  INV_ASSERT(db, i, _key, (
     db->algos[i]->snap(db->databases[i], cursor->cursors[i], dir),
     db->algos[i]->key(db->databases[i], cursor->cursors[i])
   ));
 }
 
-static char *invar_write(kvds_db *_db, kvds_cursor *_cursor, char *data) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static char *inv_write(kvds_db *_db, kvds_cursor *_cursor, char *data) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
-  INVAR_ASSERT_RETURN(db, i, (db->algos[i]->write(db->databases[i], cursor->cursors[i], data)));
+  INV_ASSERT_RETURN(db, i, (db->algos[i]->write(db->databases[i], cursor->cursors[i], data)));
 }
 
-static char *invar_read(kvds_db *_db, kvds_cursor *_cursor) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static char *inv_read(kvds_db *_db, kvds_cursor *_cursor) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
-  INVAR_ASSERT_RETURN(db, i, (db->algos[i]->read(db->databases[i], cursor->cursors[i])));
+  INV_ASSERT_RETURN(db, i, (db->algos[i]->read(db->databases[i], cursor->cursors[i])));
 }
 
-static char *invar_remove(kvds_db *_db, kvds_cursor *_cursor) {
-  invar_db *db = _db;
-  invar_cursor *cursor = _cursor;
+static char *inv_remove(kvds_db *_db, kvds_cursor *_cursor) {
+  inv_db *db = _db;
+  inv_cursor *cursor = _cursor;
   
-  INVAR_ASSERT_RETURN(db, i, (db->algos[i]->remove(db->databases[i], cursor->cursors[i])));
+  INV_ASSERT_RETURN(db, i, (db->algos[i]->remove(db->databases[i], cursor->cursors[i])));
 }
 
-#undef INVAR_ASSERT_RETURN
-#undef INVAR_ASSERT
-#undef _INVAR_ASSERT
+#undef INV_ASSERT_RETURN
+#undef INV_ASSERT
+#undef _INV_ASSERT
 
 
-REGISTER("compare", "inv") {
-  .create_db = invar_create_db,
-  .destroy_db = invar_destroy_db,
-  .create_cursor = invar_create_cursor,
-  .move_cursor = invar_move_cursor,
-  .destroy_cursor = invar_destroy_cursor,
+REGISTER("default", "inv", "Run all algorithms and compare the results") {
+  .create_db = inv_create_db,
+  .destroy_db = inv_destroy_db,
+  .create_cursor = inv_create_cursor,
+  .move_cursor = inv_move_cursor,
+  .destroy_cursor = inv_destroy_cursor,
   
-  .key = invar_key,
-  .exists = invar_exists,
-  .snap = invar_snap,
+  .key = inv_key,
+  .exists = inv_exists,
+  .snap = inv_snap,
   
-  .write = invar_write,
-  .read = invar_read,
-  .remove = invar_remove,
+  .write = inv_write,
+  .read = inv_read,
+  .remove = inv_remove,
 };
 
 

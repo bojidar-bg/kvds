@@ -4,14 +4,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const kvds_error KVDS_INVALID = 1;
+static const kvds_error KVDS_UNIMPLEMENTED = 2;
+
+char* kvds_describe_error(kvds_error error) {
+  if (error == KVDS_OK) {
+    return "";
+  }
+  if (error == KVDS_INVALID) {
+    return "Invalid command";
+  }
+  if (error == KVDS_UNIMPLEMENTED) {
+    return "Unimplemented command";
+  }
+  if (error == KVDS_QUIT) {
+    return "Quit";
+  }
+  return "Unknown Error";
+}
+
 typedef struct kvds_command_state {
   struct kvds_database_algo *algo;
   kvds_db *db;
   
   kvds_cursor *cursor;
 } kvds_command_state;
-
-typedef struct kvds_execute_result kvds_execute_result;
 
 struct kvds_command_state* kvds_create_command_state(struct kvds_database_algo *algo, void *db) {
   kvds_command_state *state = malloc(sizeof(kvds_command_state));
@@ -28,20 +45,7 @@ void kvds_destroy_command_state(struct kvds_command_state *state) {
   free(state);
 }
 
-char* kvds_get_error(int error) {
-  if (error == 1) {
-    return "Invalid command";
-  }
-  if (error == 2) {
-    return "Unimplemented command";
-  }
-  if (error == -1) {
-    return "Quit";
-  }
-  return "Unknown Error";
-}
-
-int kvds_execute_command(struct kvds_command_state *state, char *command, FILE *output) {
+kvds_error kvds_execute_command(struct kvds_command_state *state, char *command, FILE *output) {
   while (command[0] != '\0') {
     
     unsigned long command_len = 0;
@@ -74,14 +78,14 @@ int kvds_execute_command(struct kvds_command_state *state, char *command, FILE *
       }
     } else if (ISCMD("key") || ISCMD("k")) {
       if (!state->algo->key) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       long long key = state->algo->key(state->db, state->cursor);
       
       fprintf(output, "%lld\n", key);
     } else if (ISCMD("exists") || ISCMD("e")) {
       if (!state->algo->exists) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       bool exists = state->algo->exists(state->db, state->cursor);
       
@@ -92,7 +96,7 @@ int kvds_execute_command(struct kvds_command_state *state, char *command, FILE *
       }
     } else if (ISCMD("read") || ISCMD("r")) {
       if (!state->algo->read) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       char *stored = state->algo->read(state->db, state->cursor);
       if (stored == NULL) {
@@ -102,7 +106,7 @@ int kvds_execute_command(struct kvds_command_state *state, char *command, FILE *
       }
     } else if (ISCMD("write") || ISCMD("w")) {
       if (!state->algo->write) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       unsigned long args_len = strlen(args);
       
@@ -116,33 +120,50 @@ int kvds_execute_command(struct kvds_command_state *state, char *command, FILE *
       //fprintf(output, "Stored %lu bytes\n", args_len);
     } else if (ISCMD("delete") || ISCMD("d")) {
       if (!state->algo->remove) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       char *old_stored = state->algo->remove(state->db, state->cursor);
       free(old_stored);
     } else if (ISCMD("prev") || ISCMD("p") || ISCMD("<")) {
       if (!state->algo->snap) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       state->algo->snap(state->db, state->cursor, KVDS_SNAP_LOWER);
     } else if (ISCMD("next") || ISCMD("n") || ISCMD(">")) {
       if (!state->algo->snap) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       state->algo->snap(state->db, state->cursor, KVDS_SNAP_HIGHER);
-    } else if (ISCMD("closest") || ISCMD("c") || ISCMD("=")) {
+    } else if (ISCMD("closest") || ISCMD("c")) {
       if (!state->algo->snap) {
-        return 2; // Unimplemented command.
+        return KVDS_UNIMPLEMENTED;
       }
       state->algo->snap(state->db, state->cursor, KVDS_SNAP_CLOSEST_LOW);
+    } else if (ISCMD("#")) {
+      return KVDS_OK; // The whole line was processed
+    } else if (ISCMD("help") || ISCMD("?")) {
+      fprintf(output,
+        "Available commands: \n"
+        "  select, s [key] - Move the cursor to key\n"
+        "  key, k - Print current key\n"
+        "  exists, e - Print whether current key exists\n"
+        "  write, w [data...] - Write data at cursor\n"
+        "  read, r - Print data at cursor\n"
+        "  delete, d - Delete data at cursor\n"
+        "  prev, p, < - Move cursor left\n"
+        "  next, n, > - Move cursor right\n"
+        "  closest, c - Move cursor to closest\n"
+        "  # - Comment\n"
+        "  help, ? - Print this message\n");
     } else if (ISCMD("quit") || ISCMD("q")) {
-      return -1; // Quit.
+      return KVDS_QUIT;
     } else { 
-      return 1; // Invalid command.
+      return KVDS_INVALID;
     }
     
+#undef ISCMD
+
     command = args;
   }
   return 0;
-#undef ISCMD
 }

@@ -3,33 +3,58 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <string.h>
 #include "commands.h"
 #include "interface.h"
 #include "registry.h"
 
+void print_usage(char** argv) {
+  fprintf(stderr, "Usage:\n");
+  fprintf(stderr, "  %s [algorithm]\n\n", argv[0]);
+  fprintf(stderr, "Available algorithms:");
+  struct kvds_registry_entry *last_entry = NULL;
+  for (struct kvds_registry_entry *entry = kvds_get_algos_list(); entry != NULL; entry = entry->next) {
+    if (last_entry != NULL && entry->algo == last_entry->algo) { // List multiple name of an algorithm on the same line
+      fprintf(stderr, ", %s", entry->name);
+    } else {
+      if (last_entry != NULL) fprintf(stderr, " - %s", last_entry->description);
+      fprintf(stderr, "\n  %s", entry->name);
+    }
+    last_entry = entry;
+  }
+    if (last_entry != NULL) fprintf(stderr, " - %s", last_entry->description);
+  fprintf(stderr, "\n");
+}
+
 int main(int argc, char **argv) {
-  char* algo_name = "binary_search_tree";
-  if (argc > 1) {
-    algo_name = argv[argc - 1]; // TODO: Flag parsing
+#ifndef NDEBUG
+  char* algo_name = "default";
+#else
+  char* algo_name = "scapegoat";
+#endif
+  if (argc == 2) {
+    if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+      print_usage(argv);
+      return 0;
+    }
+    
+    algo_name = argv[1];
+  }
+  if (argc > 2) {
+    fprintf(stderr, "Error: Too many arguments.\n");
+    print_usage(argv);
+    return 2;
   }
   
   struct kvds_database_algo *algo = kvds_get_algo(algo_name);
   
   if (algo == NULL) {
-      fprintf(stderr, "Error: No such algorithm: %s\n", algo_name);
-      fprintf(stderr, "  Available algorithms:");
-      struct kvds_database_algo *last_algo = NULL;
-      for (struct kvds_registry_entry *entry = kvds_get_algos_list(); entry; entry = entry->next) {
-        if (entry->algo == last_algo) { // List multiple name of an algorithm on the same line
-          fprintf(stderr, ", %s", entry->name);
-        } else {
-          fprintf(stderr, "\n  - %s", entry->name);
-        }
-        last_algo = entry->algo;
-      }
-      fprintf(stderr, "\n");
-      
+    fprintf(stderr, "Error: No such algorithm: %s\n", algo_name);
+    print_usage(argv);
+    return 2;
   }
+  
+  bool interactive = isatty(fileno(stdin));
   
   kvds_db *db = algo->create_db();
   
@@ -37,14 +62,16 @@ int main(int argc, char **argv) {
       fprintf(stderr, "Error: Failed to create database");
   }
   
-  struct kvds_command_state *state = kvds_create_command_state(algo, db);
+  if (interactive) {
+    fprintf(stderr, "Created a database with algorithm: %s\n", algo_name);
+    fprintf(stderr, "Use \"help\" for a list of commands.\n");
+  }
   
-  bool interactive = isatty(fileno(stdin));
+  struct kvds_command_state *state = kvds_create_command_state(algo, db);
   
   int exit_code = 0;
   
-  char line[1000];
-  char output_buf[1000];
+  char line[1024];
   while(true) {
     if (interactive) {
       fflush(stdout);
@@ -53,9 +80,9 @@ int main(int argc, char **argv) {
     
     if (fgets(line, sizeof line / sizeof line[0], stdin)) {
       int err = kvds_execute_command(state, line, stdout);
-      if (err) {
-        fprintf(stderr, "Error: %s\n", kvds_get_error(err));
-        if (err == -1) {
+      if (err != KVDS_OK) {
+        fprintf(stderr, "Error: %s\n", kvds_describe_error(err));
+        if (err == KVDS_QUIT) {
           break;
         }
         exit_code = 1;

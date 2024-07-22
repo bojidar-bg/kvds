@@ -1,14 +1,14 @@
-#include <stdlib.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <string.h>
 #include "commands.h"
 #include "interface.h"
 #include "registry.h"
+#include <limits.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-void print_usage(char** argv) {
+void print_usage(char **argv) {
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "  %s [algorithm]\n\n", argv[0]);
   fprintf(stderr, "Available algorithms:");
@@ -22,22 +22,22 @@ void print_usage(char** argv) {
     }
     last_entry = entry;
   }
-    if (last_entry != NULL) fprintf(stderr, " - %s", last_entry->description);
+  if (last_entry != NULL) fprintf(stderr, " - %s", last_entry->description);
   fprintf(stderr, "\n");
 }
 
 int main(int argc, char **argv) {
 #ifndef NDEBUG
-  char* algo_name = "default";
+  char *algo_name = "default";
 #else
-  char* algo_name = "scapegoat";
+  char *algo_name = "scapegoat";
 #endif
   if (argc == 2) {
     if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
       print_usage(argv);
       return 0;
     }
-    
+
     algo_name = argv[1];
   }
   if (argc > 2) {
@@ -45,39 +45,39 @@ int main(int argc, char **argv) {
     print_usage(argv);
     return 2;
   }
-  
+
   struct kvds_database_algo *algo = kvds_get_algo(algo_name);
-  
+
   if (algo == NULL) {
     fprintf(stderr, "Error: No such algorithm: %s\n", algo_name);
     print_usage(argv);
     return 2;
   }
-  
+
   bool interactive = isatty(fileno(stdin));
-  
+
   kvds_db *db = algo->create_db();
-  
+
   if (db == NULL) {
-      fprintf(stderr, "Error: Failed to create database");
+    fprintf(stderr, "Error: Failed to create database");
   }
-  
+
   if (interactive) {
     fprintf(stderr, "Created a database with algorithm: %s\n", algo_name);
     fprintf(stderr, "Use \"help\" for a list of commands.\n");
   }
-  
+
   struct kvds_command_state *state = kvds_create_command_state(algo, db);
-  
+
   int exit_code = 0;
-  
+
   char line[1024];
-  while(true) {
+  while (true) {
     if (interactive) {
       fflush(stdout);
       fprintf(stderr, "> ");
     }
-    
+
     if (fgets(line, sizeof line / sizeof line[0], stdin)) {
       int err = kvds_execute_command(state, line, stdout);
       if (err != KVDS_OK) {
@@ -99,11 +99,9 @@ int main(int argc, char **argv) {
       break;
     }
   }
-  
+
   kvds_destroy_command_state(state);
-  algo->destroy_db(db, (void*)&free);
-  
-  
-  
+  algo->destroy_db(db, (void *)&free);
+
   return exit_code;
 }

@@ -11,7 +11,7 @@ void kvds_register_algo_entry(struct kvds_registry_entry *entry) {
 
 struct kvds_database_algo *kvds_get_algo(const char *name) {
   for (struct kvds_registry_entry *entry = registry_entries; entry; entry = entry->next) {
-    if(strcmp(name, entry->name) == 0) {
+    if (strcmp(name, entry->name) == 0) {
       return entry->algo;
     }
   }

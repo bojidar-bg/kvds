@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifndef BST_SCAPEGOAT_FACTOR
-#define BST_SCAPEGOAT_FACTOR 10 / 16
+#ifndef SCG_SCAPEGOAT_FACTOR
+#define SCG_SCAPEGOAT_FACTOR 10 / 16
 #endif
 
 typedef struct scg_db {
@@ -92,8 +92,8 @@ static scg_invariants _scg_assert_invariants(scg_node *node, int depth) {
   }
 
   assert(node->size == left_size + right_size + 1);
-  assert(left_size <= node->size * BST_SCAPEGOAT_FACTOR);
-  assert(right_size <= node->size * BST_SCAPEGOAT_FACTOR);
+  assert(left_size <= node->size * SCG_SCAPEGOAT_FACTOR);
+  assert(right_size <= node->size * SCG_SCAPEGOAT_FACTOR);
 
   return inv;
 }
@@ -324,7 +324,7 @@ static void scg_node_rebalance_from(scg_db *db, scg_node *node) {
     int right_size = scg_get_size(node->right);
     int node_size = scg_get_size(node);
 
-    if (left_size > node_size * BST_SCAPEGOAT_FACTOR || right_size > node_size * BST_SCAPEGOAT_FACTOR) {
+    if (left_size > node_size * SCG_SCAPEGOAT_FACTOR || right_size > node_size * SCG_SCAPEGOAT_FACTOR) {
       to_recreate = node;
     }
   }
@@ -486,7 +486,7 @@ static void scg_snap(kvds_db *_db, kvds_cursor *_cursor, enum kvds_snap_directio
   }
 }
 
-REGISTER("scapegoat", "sgt", "Store entries in a scapegoat-balanced binary search tree.") = {
+REGISTER("scapegoat", "scg", "Store entries in a scapegoat-balanced binary search tree.") = {
   .create_db = scg_create_db,
   .destroy_db = scg_destroy_db,
   .create_cursor = scg_create_cursor,

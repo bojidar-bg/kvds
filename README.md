@@ -99,12 +99,12 @@ Skip lists are an extension of linked lists which allows for more efficient look
 
 Scapegoat trees are binary search trees that are rebalanced whenever an insertion or deletion results in a tree that has a height disparity over some factor, α, in which case the nearest ancestor with a size disparity of over α is located and completely recreated as a balanced tree. You can find more information about them on [Wikipedia](https://en.wikipedia.org/wiki/Scapegoat_tree).
 
-In KVDS, the scapegoat algorithm (`sgt`) is slightly modified, and all nodes keep track of their size, instead of the code keeping track of their height. As such, after an insertion or deletion, we only need to go over the ancestors of a given node and find whether any have become imbalanced due to the size change.
+In KVDS, the scapegoat algorithm (`scg`) is slightly modified, and all nodes keep track of their size, instead of the code keeping track of their height. As such, after an insertion or deletion, we only need to go over the ancestors of a given node and find whether any have become imbalanced due to the size change.
 
-By default, the algorithm uses an α value of 10/16, which was experimentally confirmed to result in reasonable performance. To use another value, you can define `BST_SCAPEGOAT_FACTOR` when compiling, by inserting a line like the following to `tup.config`:
+By default, the algorithm uses an α value of 10/16, which was experimentally confirmed to result in reasonable performance. To use another value, you can define `SCG_SCAPEGOAT_FACTOR` when compiling, by inserting a line like the following in `tup.config`:
 
 ```
-CONFIG_CCFLAGS=-DBST_SCAPEGOAT_FACTOR=4/6
+CONFIG_CCFLAGS=-DSCG_SCAPEGOAT_FACTOR=4/6
 ```
 
 | Operation | Best-case complexity | Worst-case complexity |

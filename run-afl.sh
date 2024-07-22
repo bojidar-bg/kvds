@@ -19,9 +19,9 @@ mkdir -p /tmp/afl-out
 ln -s /tmp/afl-out afl/out # Save a bit of SSD wear...
 
 if [ "$1" = main ] || [ "$1" = "" ]; then
-  AFL_AUTORESUME=1 AFL_FINAL_SYNC=1 afl-fuzz -i seeds -o out -M main-$HOSTNAME -- ./kvds
+  AFL_AUTORESUME=1 AFL_FINAL_SYNC=1 afl-fuzz -i seeds -o out -M main-$HOSTNAME -- ./kvds inv
 fi
 
 if [ "${1%-*}" = secondary ]; then
-  AFL_AUTORESUME=1 AFL_FINAL_SYNC=1 afl-fuzz -i seeds -o out -S "$1" -a ascii -- ./kvds
+  AFL_AUTORESUME=1 AFL_FINAL_SYNC=1 afl-fuzz -i seeds -o out -S "$1" -a ascii -- ./kvds inv
 fi

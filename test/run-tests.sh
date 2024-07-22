@@ -5,7 +5,7 @@ set -o pipefail
 
 cd "`dirname $0`"
 
-ALGO="${1:-binary_search_tree}"
+ALGO="${1:-default}"
 
 KVDS=../bin/kvds
 

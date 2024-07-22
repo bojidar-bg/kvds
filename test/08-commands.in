@@ -1,0 +1,6 @@
+# This is a comment
+s 40 w Hii
+read # Prints Hii
+s 50 < r # Also prints Hii
+select
+key # Prints 0, because there's nothing on the line after select
